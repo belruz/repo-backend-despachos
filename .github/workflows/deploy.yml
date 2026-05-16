@@ -1,0 +1,48 @@
+name: CI/CD Backend Despachos
+
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Login a Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build y push imagen
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
+
+      - name: Deploy en EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_BACKEND_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
+            docker stop backend-despachos || true
+            docker rm backend-despachos || true
+            docker run -d \
+              --name backend-despachos \
+              -p 8081:8081 \
+              -e DB_ENDPOINT=10.0.2.129 \
+              -e DB_PORT=3306 \
+              -e DB_NAME=innovatech \
+              -e DB_USERNAME=root \
+              -e DB_PASSWORD=root1234 \
+              --restart always \
+              ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
