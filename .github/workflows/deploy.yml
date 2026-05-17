@@ -26,23 +26,21 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
 
-      - name: Deploy en EC2
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Deploy en EC2 via SSM
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          host: ${{ secrets.EC2_BACKEND_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
-            docker stop backend-despachos || true
-            docker rm backend-despachos || true
-            docker run -d \
-              --name backend-despachos \
-              -p 8081:8081 \
-              -e DB_ENDPOINT=10.0.2.129 \
-              -e DB_PORT=3306 \
-              -e DB_NAME=innovatech \
-              -e DB_USERNAME=root \
-              -e DB_PASSWORD=root1234 \
-              --restart always \
-              ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+
+      - name: Ejecutar deploy via SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "i-040e1052a9aa59574" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest",
+              "docker stop backend-despachos || true",
+              "docker rm backend-despachos || true",
+              "docker run -d --name backend-despachos -p 8081:8081 -e DB_
