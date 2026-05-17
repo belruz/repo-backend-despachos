@@ -26,7 +26,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
 
-      - name: Deploy en EC2 via SSM
+      - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -39,8 +39,4 @@ jobs:
           aws ssm send-command \
             --instance-ids "i-040e1052a9aa59574" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest",
-              "docker stop backend-despachos || true",
-              "docker rm backend-despachos || true",
-              "docker run -d --name backend-despachos -p 8081:8081 -e DB_
+            --parameters commands='["docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest","docker stop backend-despachos || true","docker rm backend-despachos || true","docker run -d --name backend-despachos -p 8081:8081 -e DB_ENDPOINT=10.0.2.129 -e DB_PORT=3306 -e DB_NAME=innovatech -e DB_USERNAME=root -e DB_PASSWORD=root1234 --restart always ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest"]'
