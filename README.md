@@ -11,9 +11,10 @@ API REST desarrollada en Spring Boot para gestión de despachos, desplegada en A
 
 ## Arquitectura
 - EC2 privada (subnet-privada 10.0.2.0/24)
-- IP privada: 10.0.2.39
 - Puerto: 8081
-- Base de datos: MySQL en ec2-data (10.0.2.129:3306)
+- Base de datos: MySQL en ec2-data (3306)
+
+Este repositorio incluye el `docker-compose.yml` que levanta **ambos backends** (ventas y despachos) en la misma EC2 privada.
 
 ## Endpoints
 - `GET /api/v1/despachos` - Obtener todos los despachos
@@ -26,7 +27,16 @@ API REST desarrollada en Spring Boot para gestión de despachos, desplegada en A
 El pipeline se activa con push en la rama `deploy`:
 1. Construye imagen Docker multi-stage
 2. Publica imagen en Docker Hub
-3. Despliega en EC2 via AWS SSM
+3. Despliega en EC2 via AWS SSM usando `docker-compose` (levanta ventas + despachos)
+
+En el deploy se crea un `.env` en la EC2 con las variables de base de datos y se ejecuta `docker-compose up -d`.
+
+## Docker Compose
+- `docker-compose.yml` define los servicios `backend-ventas` y `backend-despachos`.
+- Incluye volúmenes nombrados para persistencia a nivel de contenedor.
+
+## Persistencia
+La base de datos corre en la EC2 de datos usando un volumen Docker **named**  montado en `/var/lib/mysql`, lo que permite mantener la informacion al reiniciar o recrear el contenedor.
 
 ## Variables de entorno
 | Variable | Descripción |
