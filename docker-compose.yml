@@ -13,8 +13,7 @@ services:
     volumes:
       - despachos-data:/app/data
     restart: always
-    networks:
-      - interna
+ 
 
   backend-ventas:
     image: belruz/repo-backend-ventas:latest
@@ -30,8 +29,7 @@ services:
     volumes:
       - ventas-data:/app/data
     restart: always
-    networks:
-      - interna
+
 
 volumes:
   despachos-data:
