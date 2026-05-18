@@ -34,12 +34,13 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Crear .env en EC2
+      - name: Crear .env y docker-compose en EC2
         run: |
+          COMPOSE_CONTENT=$(cat docker-compose.yml | base64 -w 0)
           aws ssm send-command \
             --instance-ids "i-040e1052a9aa59574" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands='["echo DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} > /home/ssm-user/.env && echo DB_PORT=${{ secrets.DB_PORT }} >> /home/ssm-user/.env && echo DB_NAME=${{ secrets.DB_NAME }} >> /home/ssm-user/.env && echo DB_USERNAME=${{ secrets.DB_USERNAME }} >> /home/ssm-user/.env && echo DB_PASSWORD=${{ secrets.DB_PASSWORD }} >> /home/ssm-user/.env"]'
+            --parameters commands=["echo $COMPOSE_CONTENT | base64 -d > /home/ssm-user/docker-compose.yml && echo DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} > /home/ssm-user/.env && echo DB_PORT=${{ secrets.DB_PORT }} >> /home/ssm-user/.env && echo DB_NAME=${{ secrets.DB_NAME }} >> /home/ssm-user/.env && echo DB_USERNAME=${{ secrets.DB_USERNAME }} >> /home/ssm-user/.env && echo DB_PASSWORD=${{ secrets.DB_PASSWORD }} >> /home/ssm-user/.env"]
 
       - name: Ejecutar deploy via SSM
         run: |
