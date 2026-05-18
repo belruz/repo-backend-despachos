@@ -1,6 +1,6 @@
 services:
   backend-despachos:
-    build: .
+    image: belruz/repo-backend-despachos:latest
     container_name: backend-despachos
     ports:
       - "8081:8081"
