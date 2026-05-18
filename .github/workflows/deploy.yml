@@ -46,8 +46,4 @@ jobs:
           aws ssm send-command \
             --instance-ids "i-040e1052a9aa59574" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest",
-              "docker stop backend-despachos || true",
-              "docker rm backend-despachos || true",
-              "docker run -d --name backend-despachos -p 8081:8081 -e DB_
+            --parameters commands='["cd /home/ssm-user && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-ventas:latest && docker-compose down && docker-compose up -d"]'
