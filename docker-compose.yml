@@ -41,5 +41,5 @@ volumes:
 
 networks:
   interna:
-    internal: true
+
 
