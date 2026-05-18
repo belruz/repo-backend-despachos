@@ -13,6 +13,8 @@ services:
     volumes:
       - despachos-data:/app/data
     restart: always
+    networks:
+      - interna
  
 
   backend-ventas:
@@ -29,9 +31,15 @@ services:
     volumes:
       - ventas-data:/app/data
     restart: always
+    networks:
+      - interna
 
 
 volumes:
   despachos-data:
   ventas-data:
+
+networks:
+  interna:
+    internal: true
 

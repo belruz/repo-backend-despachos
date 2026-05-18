@@ -29,11 +29,12 @@ El pipeline se activa con push en la rama `deploy`:
 2. Publica imagen en Docker Hub
 3. Despliega en EC2 via AWS SSM usando `docker-compose` (levanta ventas + despachos)
 
-En el deploy se crea un `.env` en la EC2 con las variables de base de datos y se ejecuta `docker-compose up -d`.
+En el deploy se crea un `.env` en la EC2 con las variables de base de datos, se ajusta el plugin de autenticacion de MySQL en la EC2 data y se ejecuta `docker-compose up -d`.
 
 ## Docker Compose
 - `docker-compose.yml` define los servicios `backend-ventas` y `backend-despachos`.
 - Incluye volúmenes nombrados para persistencia a nivel de contenedor.
+- Define una red interna para aislar la comunicación entre servicios.
 
 ## Persistencia
 La base de datos corre en la EC2 de datos usando un volumen Docker **named**  montado en `/var/lib/mysql`, lo que permite mantener la informacion al reiniciar o recrear el contenedor.
