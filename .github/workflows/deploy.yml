@@ -34,7 +34,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Crear .env y docker-compose en EC2
+      - name: Crear .env y docker-compose en EC2 App
         run: |
           COMPOSE_CONTENT=$(cat docker-compose.yml | base64 -w 0)
           aws ssm send-command \
@@ -42,16 +42,9 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters commands=["echo $COMPOSE_CONTENT | base64 -d > /home/ssm-user/docker-compose.yml && echo DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} > /home/ssm-user/.env && echo DB_PORT=${{ secrets.DB_PORT }} >> /home/ssm-user/.env && echo DB_NAME=${{ secrets.DB_NAME }} >> /home/ssm-user/.env && echo DB_USERNAME=${{ secrets.DB_USERNAME }} >> /home/ssm-user/.env && echo DB_PASSWORD=${{ secrets.DB_PASSWORD }} >> /home/ssm-user/.env"]
 
-      - name: Ajustar autenticacion MySQL en EC2 data
-        run: |
-          aws ssm send-command \
-            --instance-ids "i-07abc93121ac84274" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands='["docker exec mysql-data mysql -u ${{ secrets.DB_USERNAME }} -p${{ secrets.DB_PASSWORD }} -e \"ALTER USER '${{ secrets.DB_USERNAME }}'@'%' IDENTIFIED WITH mysql_native_password BY '${{ secrets.DB_PASSWORD }}'; ALTER USER '${{ secrets.DB_USERNAME }}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${{ secrets.DB_PASSWORD }}'; FLUSH PRIVILEGES;\""]'
-
-      - name: Ejecutar deploy via SSM
+      - name: Ejecutar deploy via SSM en EC2 App
         run: |
           aws ssm send-command \
             --instance-ids "i-040e1052a9aa59574" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands='["cd /home/ssm-user && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-ventas:latest && docker-compose down && docker-compose up -d"]'
+            --parameters commands='["cd /home/ssm-user && docker-compose pull backend-despachos && docker-compose up -d --no-deps backend-despachos"]'
