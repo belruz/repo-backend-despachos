@@ -1,9 +1,15 @@
-name: CI/CD Backend Despachos
+name: CI/CD Backend Despachos - EKS
 
 on:
   push:
     branches:
       - deploy
+
+env:
+  ECR_REPO: innovatech-backend-despachos
+  EKS_NAMESPACE: innovatech
+  DEPLOYMENT_NAME: backend-despachos
+  CONTAINER_NAME: backend-despachos
 
 jobs:
   build-and-deploy:
@@ -11,20 +17,7 @@ jobs:
 
     steps:
       - name: Checkout código
-        uses: actions/checkout@v3
-
-      - name: Login a Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build y push imagen
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest
+        uses: actions/checkout@v4
 
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -34,17 +27,44 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Crear .env y docker-compose en EC2
-        run: |
-          COMPOSE_CONTENT=$(cat docker-compose.yml | base64 -w 0)
-          aws ssm send-command \
-            --instance-ids "i-040e1052a9aa59574" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands=["echo $COMPOSE_CONTENT | base64 -d > /home/ssm-user/docker-compose.yml && echo DB_ENDPOINT=${{ secrets.DB_ENDPOINT }} > /home/ssm-user/.env && echo DB_PORT=${{ secrets.DB_PORT }} >> /home/ssm-user/.env && echo DB_NAME=${{ secrets.DB_NAME }} >> /home/ssm-user/.env && echo DB_USERNAME=${{ secrets.DB_USERNAME }} >> /home/ssm-user/.env && echo DB_PASSWORD=${{ secrets.DB_PASSWORD }} >> /home/ssm-user/.env"]
+      - name: Login a Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Ejecutar deploy via SSM
+      - name: Definir tag de imagen
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Build y push imagen
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          aws ssm send-command \
-            --instance-ids "i-040e1052a9aa59574" \
-            --document-name "AWS-RunShellScript" \
-            --parameters commands='["cd /home/ssm-user && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-despachos:latest && docker pull ${{ secrets.DOCKERHUB_USERNAME }}/repo-backend-ventas:latest && docker-compose down && docker-compose up -d"]'
+          docker build -t $ECR_REGISTRY/${ECR_REPO}:${IMAGE_TAG} .
+          docker push $ECR_REGISTRY/${ECR_REPO}:${IMAGE_TAG}
+
+      - name: Instalar kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.0
+
+      - name: Configurar kubeconfig para EKS
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name ${{ secrets.EKS_CLUSTER_NAME }}
+          kubectl config current-context
+
+      - name: Aplicar manifests base
+        run: |
+          kubectl apply -f k8s/
+
+      - name: Actualizar imagen del deployment
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          kubectl set image deployment/${DEPLOYMENT_NAME} \
+            ${CONTAINER_NAME}=$ECR_REGISTRY/${ECR_REPO}:${IMAGE_TAG} \
+            -n ${EKS_NAMESPACE}
+          kubectl rollout status deployment/${DEPLOYMENT_NAME} -n ${EKS_NAMESPACE}
+
+      - name: Ver estado final
+        run: |
+          kubectl get pods -n ${EKS_NAMESPACE}
+          kubectl get svc -n ${EKS_NAMESPACE}
