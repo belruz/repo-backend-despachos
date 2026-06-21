@@ -38,17 +38,17 @@ spec:
           resources:
             requests:
               cpu: "200m"
-              memory: "256Mi"
+              memory: "512Mi"
             limits:
               cpu: "500m"
-              memory: "512Mi"
+              memory: "1024Mi"
           readinessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 30
+            initialDelaySeconds: 90
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 45
+            initialDelaySeconds: 120
             periodSeconds: 15
