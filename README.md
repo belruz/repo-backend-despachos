@@ -2,19 +2,20 @@
 
 API REST desarrollada en Spring Boot para gestión de despachos, desplegada en AWS EC2 mediante contenedor Docker y pipeline CI/CD con GitHub Actions.
 
+## Descripción del Proyecto
+Este repositorio forma parte de la plataforma central de Innovatech Chile, un sistema distribuido diseñado para la gestión eficiente de ventas y logística. El proyecto completo se compone de tres repositorios principales:
+- **Frontend**: Interfaz de usuario desarrollada en React.
+- **Backend Ventas**: Microservicio encargado del registro y control de ventas.
+- **Backend Despachos**: Microservicio encargado de la coordinación y seguimiento de envíos (este repositorio).
+
+Esta arquitectura permite una alta escalabilidad, mantenimiento simplificado y despliegues independientes en la infraestructura de AWS.
+
 ## Tecnologías
 - Java 17
 - Spring Boot 3.4.4
 - MySQL 8.0
 - Docker (multi-stage build)
 - GitHub Actions (CI/CD)
-
-## Arquitectura
-- EC2 privada (subnet-privada 10.0.2.0/24)
-- Puerto: 8081
-- Base de datos: MySQL en ec2-data (3306)
-
-Este repositorio incluye el `docker-compose.yml` que levanta **ambos backends** (ventas y despachos) en la misma EC2 privada.
 
 ## Endpoints
 - `GET /api/v1/despachos` - Obtener todos los despachos
@@ -23,27 +24,11 @@ Este repositorio incluye el `docker-compose.yml` que levanta **ambos backends** 
 - `PUT /api/v1/despachos/{id}` - Actualizar despacho
 - `DELETE /api/v1/despachos/{id}` - Eliminar despacho
 
+
 ## Pipeline CI/CD
 El pipeline se activa con push en la rama `deploy`:
 1. Construye imagen Docker multi-stage
-2. Publica imagen en Docker Hub
-3. Despliega en EC2 via AWS SSM usando `docker-compose` (levanta ventas + despachos)
+2. Publica imagen en ECR
+3. Despliega en EKS via kubectl 
 
-En el deploy se crea un `.env` en la EC2 con las variables de base de datos, se ajusta el plugin de autenticacion de MySQL en la EC2 data y se ejecuta `docker-compose up -d`.
 
-## Docker Compose
-- `docker-compose.yml` define los servicios `backend-ventas` y `backend-despachos`.
-- Incluye volúmenes nombrados para persistencia a nivel de contenedor.
-- Define una red interna para aislar la comunicación entre servicios.
-
-## Persistencia
-La base de datos corre en la EC2 de datos usando un volumen Docker **named**  montado en `/var/lib/mysql`, lo que permite mantener la informacion al reiniciar o recrear el contenedor.
-
-## Variables de entorno
-| Variable | Descripción |
-|----------|-------------|
-| DB_ENDPOINT | IP del servidor MySQL |
-| DB_PORT | Puerto MySQL (3306) |
-| DB_NAME | Nombre de la base de datos |
-| DB_USERNAME | Usuario MySQL |
-| DB_PASSWORD | Contraseña MySQL |
